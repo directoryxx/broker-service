@@ -1,57 +1,44 @@
 package repository
 
+import (
+	"context"
+	"log"
+
+	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/go-redis/redis/v8"
+)
+
 // UserRepository represent the user's repository contract
 type UserRepository interface {
-	// Publish(ctx context.Context, data string)
+	Publish(ctx context.Context, data string, topic string) error
 }
 
 type UserRepositoryImpl struct {
+	Redis *redis.Client
+	Kafka *kafka.Producer
 	// RabbitMQ *amqp091.Connection
 }
 
 // NewMysqlAuthorRepository will create an implementation of author.Repository
 // func NewUserRepository(rabbitConn *amqp091.Connection) UserRepository {
-func NewUserRepository() UserRepository {
+func NewUserRepository(redisConnect *redis.Client, kafkaProduce *kafka.Producer) UserRepository {
 	return &UserRepositoryImpl{
-		// RabbitMQ: rabbitConn,
+		Redis: redisConnect,
+		Kafka: kafkaProduce,
 	}
 }
 
-// func (m *UserRepositoryImpl) Publish(ctx context.Context, data string) {
-// 	ch, err := m.RabbitMQ.Channel()
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	defer ch.Close()
+func (m *UserRepositoryImpl) Publish(ctx context.Context, data string, topic string) error {
+	err := m.Kafka.Produce(&kafka.Message{
+		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+		Value:          []byte(data),
+	}, nil)
 
-// 	q, err := ch.QueueDeclare(
-// 		"logger", //name
-// 		false,    // durable
-// 		false,    //delete when unused
-// 		false,    // exclusive
-// 		false,    // no-wait
-// 		nil,      // arguments
-// 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	log.Printf("Sending message success: %s", data)
 
-// 	// body := "Hi halovina, keep in touch"
-// 	err = ch.PublishWithContext(
-// 		ctx,
-// 		"",     // exchange
-// 		q.Name, // routing key
-// 		false,  // mandatory
-// 		false,  // immadiate
-// 		amqp091.Publishing{
-// 			ContentType: "text/plain",
-// 			Body:        []byte(data),
-// 		})
-
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	log.Printf("Sending message success: %s", data)
-// }
+	return err
+}

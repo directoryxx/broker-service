@@ -2,11 +2,15 @@ package http
 
 import (
 	"broker/cmd/api"
+	"broker/infrastructure"
+	"broker/internal/domain"
 	"broker/internal/repository"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -34,16 +38,18 @@ func RunWebserver() {
 
 	log.Println("[INFO] Starting Broker Service on port", os.Getenv("APPLICATION_PORT"))
 
-	// log.Println("[INFO] Loading RabbitMQ")
-	// rabbitConn, err := infrastructure.OpenRabbitMQ()
+	log.Println("[INFO] Loading Redis")
+	rediisConn := infrastructure.OpenRedis()
 
-	// if err != nil {
-	// 	log.Fatalf("Could not initialize connection to rabbitmq %s", err)
-	// }
+	log.Println("[INFO] Loading Kafka Producer")
+	kafkaProducer, err := infrastructure.ConnectKafka()
+
+	if err != nil {
+		log.Fatalf("Could not initialize connection to kafka producer %s", err)
+	}
 
 	log.Println("[INFO] Loading Repository")
-	// userRepo := repository.NewUserRepository(rabbitConn)
-	userRepo := repository.NewUserRepository()
+	userRepo := repository.NewUserRepository(rediisConn, kafkaProducer)
 
 	log.Println("[INFO] Loading Middleware")
 	SetMiddleware(app, userRepo)
@@ -65,25 +71,25 @@ func SetMiddleware(r *echo.Echo, userRepo repository.UserRepository) {
 		LogRequestID: true,
 		LogValuesFunc: func(c echo.Context, values middleware.RequestLoggerValues) error {
 			// log :=
-			// hostname, _ := os.Hostname()
-			// log := &domain.Log{
-			// 	RemoteIP:      values.RemoteIP,
-			// 	Service:       os.Getenv("APPLICATION_NAME") + " Service",
-			// 	ContainerName: hostname,
-			// 	Time:          values.StartTime.String(),
-			// 	Host:          values.Host,
-			// 	Method:        values.Method,
-			// 	Uri:           values.URI,
-			// 	UserAgent:     values.UserAgent,
-			// 	Status:        strconv.Itoa(values.Status),
-			// 	Latency:       values.Latency.String(),
-			// 	LatencyHuman:  values.Latency.String(),
-			// 	// Error:         values.Error.Error(),
-			// }
+			hostname, _ := os.Hostname()
+			log := &domain.Log{
+				RemoteIP:      values.RemoteIP,
+				Service:       os.Getenv("APPLICATION_NAME") + " Service",
+				ContainerName: hostname,
+				Time:          values.StartTime.String(),
+				Host:          values.Host,
+				Method:        values.Method,
+				Uri:           values.URI,
+				UserAgent:     values.UserAgent,
+				Status:        strconv.Itoa(values.Status),
+				Latency:       values.Latency.String(),
+				LatencyHuman:  values.Latency.String(),
+				// Error:         values.Error.Error(),
+			}
 
-			// b, _ := json.Marshal(log)
+			b, _ := json.Marshal(log)
 
-			// userRepo.Publish(c.Request().Context(), string(b))
+			userRepo.Publish(c.Request().Context(), string(b), "log-http")
 
 			return nil
 		},
