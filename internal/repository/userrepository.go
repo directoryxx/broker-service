@@ -11,6 +11,7 @@ import (
 // UserRepository represent the user's repository contract
 type UserRepository interface {
 	Publish(ctx context.Context, data string, topic string) error
+	GetUUID(ctx context.Context, uuid string) (string, error)
 }
 
 type UserRepositoryImpl struct {
@@ -41,4 +42,9 @@ func (m *UserRepositoryImpl) Publish(ctx context.Context, data string, topic str
 	log.Printf("Sending message success: %s", data)
 
 	return err
+}
+
+func (m *UserRepositoryImpl) GetUUID(ctx context.Context, uuid string) (res string, err error) {
+	res, err = m.Redis.Get(ctx, uuid).Result()
+	return res, err
 }

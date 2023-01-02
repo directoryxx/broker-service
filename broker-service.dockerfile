@@ -3,11 +3,13 @@ FROM golang:1.18-alpine as builder
 
 RUN mkdir /app
 
+RUN apk add build-base librdkafka-dev pkgconf
+
 COPY . /app
 
 WORKDIR /app
 
-RUN CGO_ENABLED=0 go build -o ./build/brokerApp ./internal/app
+RUN CGO_ENABLED=1 go build -tags musl -o ./build/brokerApp ./internal/app
 
 RUN chmod +x /app/build/brokerApp
 
