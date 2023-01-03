@@ -130,7 +130,7 @@ func authMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		secondDiff := math.Floor(expTime.Sub(now).Seconds())
 
 		client := &http.Client{}
-		req, _ := http.NewRequest("GET", "http://15.235.166.113:8017/profile", nil)
+		req, _ := http.NewRequest("GET", "http://auth-service/profile", nil)
 		req.Header.Set("Authorization", token)
 
 		resp, errResp := client.Do(req)
