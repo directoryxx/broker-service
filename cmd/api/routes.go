@@ -41,11 +41,11 @@ func Routes(router *echo.Echo) {
 	router.POST("/auth/login", controller.Login)
 	router.POST("/auth/register", controller.Register)
 
-	router.Use(middlewareOne)
-	router.GET("/auth/profile", controller.Login)
+	router.Use(authMiddleware)
+	router.GET("/auth/profile", controller.Profile)
 }
 
-func middlewareOne(next echo.HandlerFunc) echo.HandlerFunc {
+func authMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		whitelistUrl := []string{"/auth/login", "/auth/register"}
 		redisConn := infrastructure.OpenRedis()
@@ -107,6 +107,11 @@ func middlewareOne(next echo.HandlerFunc) echo.HandlerFunc {
 
 		// check uuid if uuid exist pass it
 		if resUuid != "" {
+			// Parse return to struct
+			user := domain.User{}
+			json.Unmarshal([]byte(resUuid), &user)
+			// set to context
+			c.Set("user", user)
 			return next(c)
 		}
 
@@ -125,7 +130,7 @@ func middlewareOne(next echo.HandlerFunc) echo.HandlerFunc {
 		secondDiff := math.Floor(expTime.Sub(now).Seconds())
 
 		client := &http.Client{}
-		req, _ := http.NewRequest("GET", "http://auth-service/profile", nil)
+		req, _ := http.NewRequest("GET", "http://15.235.166.113:8017/profile", nil)
 		req.Header.Set("Authorization", token)
 
 		resp, errResp := client.Do(req)
@@ -159,6 +164,8 @@ func middlewareOne(next echo.HandlerFunc) echo.HandlerFunc {
 
 			return c.JSON(http.StatusUnauthorized, response)
 		}
+
+		c.Set("user", userRespAuthService.Profile)
 
 		return next(c)
 	}

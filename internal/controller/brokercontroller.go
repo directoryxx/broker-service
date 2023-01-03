@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"broker/internal/domain"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,12 @@ type brokerresponse struct {
 	Error   bool   `json:"error"`
 	Message string `json:"message"`
 	Data    any    `json:"data"`
+}
+
+type profileresponse struct {
+	Error   bool         `json:"error"`
+	Message string       `json:"message"`
+	Profile *domain.User `json:"profile"`
 }
 
 type RequestPayload struct {
@@ -196,6 +203,12 @@ func Register(c echo.Context) error {
 	}
 }
 
-func Profile() {
-
+func Profile(c echo.Context) error {
+	user := c.Get("user").(domain.User)
+	responseBroker := &profileresponse{
+		Error:   false,
+		Message: "Berhasil mengambil data",
+		Profile: &user,
+	}
+	return c.JSON(http.StatusOK, responseBroker)
 }
